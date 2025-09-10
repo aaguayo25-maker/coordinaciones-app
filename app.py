@@ -105,10 +105,21 @@ def index():
             # limitar filas para no colapsar el navegador si hay MUCHAS (opcional)
             max_rows = 500
             for _, fila in df.head(max_rows).iterrows():
-                html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
-            html += "</tbody></table></div>"
+    html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
 
-        html += "</div>"
+# Si es la hoja DOCENCIA (o quita el if para aplicarlo a todas)
+if nombre.upper() == "DOCENCIA":
+    totales = df.sum(numeric_only=True)
+    html += "<tr style='font-weight:bold; background:#f2f2f2'>"
+    for col in df.columns:
+        if col in totales:
+            html += f"<td>{totales[col]}</td>"
+        else:
+            html += "<td></td>"
+    html += "</tr>"
+
+html += "</tbody></table></div>"
+
 
     html += """
         </div>
