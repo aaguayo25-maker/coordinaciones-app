@@ -13,8 +13,6 @@ HOJAS = [
     "TUTORIAS", "ALUMNOS PUEBLOS ORIGINARIOS", "SERVICIO SOCIAL"
 ]
 
-# Si en tu Mac aún sale el error SSL (CERTIFICATE_VERIFY_FAILED),
-# puedes poner esto en True TEMPORALMENTE mientras arreglas certificados:
 ALLOW_INSECURE_SSL = False
 if ALLOW_INSECURE_SSL:
     ssl._create_default_https_context = ssl._create_unverified_context
@@ -123,18 +121,37 @@ def index():
                         return "<br>".join([f"{k}: {v}" for k, v in counts.items()])
                     return "Columna no encontrada"
 
-                html += "<div class='resumen'><h5>Resumen de variables cualitativas</h5><div class='row'>"
+                html += "<div class='resumen'><h5>Resumen de variables cualitativas y externas</h5><div class='row'>"
                 html += f"<div class='col'><strong>Categoría:</strong><br>{conteo('CATEGORIA')}</div>"
                 html += f"<div class='col'><strong>SNI:</strong><br>{conteo('SNI')}</div>"
                 html += f"<div class='col'><strong>PRODEP:</strong><br>{conteo('PRODEP')}</div>"
                 html += f"<div class='col'><strong>PROESDE:</strong><br>{conteo('PROESDE')}</div>"
-                html += f"<div class='col'><strong>NIVEL:</strong><br>{conteo('NIVEL')}</div>"
-                html += f"<div class='col'><strong>DEFINITIVIDAD:</strong><br>{conteo('DEFINITIVIDAD')}</div>"
-                html += f"<div class='col'><strong>EXTERNOS:</strong><br>{conteo('EXTERNOS')}</div>"
+                html += f"<div class='col'><strong>Nivel:</strong><br>{conteo('NIVEL')}</div>"
+                html += f"<div class='col'><strong>Definitividad:</strong><br>{conteo('DEFINITIVIDAD')}</div>"
 
-                if "INSTITUCION" in df.columns:
-                    instituciones = df["INSTITUCION"].dropna().unique()
-                    html += "<div class='col'><strong>Instituciones participantes:</strong><br>" + "<br>".join(instituciones) + "</div>"
+                # Total de profesores
+                total_profesores = len(df)
+                html += f"<div class='col'><strong>Total de profesores:</strong><br>{total_profesores}</div>"
+
+                # Total de externos
+                if "NUMERO EXTERNOS" in df.columns:
+                    total_externos = df["NUMERO EXTERNOS"].sum()
+                    html += f"<div class='col'><strong>Total de externos:</strong><br>{total_externos}</div>"
+
+                # Instituciones externas
+                instit_cols = [col for col in df.columns if col.startswith("EXTERNO")]
+                instituciones = []
+                for col in instit_cols:
+                    if col in df.columns:
+                        instituciones.extend(df[col].dropna().astype(str).tolist())
+
+                instituciones = [i for i in instituciones if i.strip() not in ["", "NO APLICA"]]
+                if instituciones:
+                    unicas = pd.Series(instituciones).value_counts().to_dict()
+                    html += "<div class='col-12 mt-3'><strong>Instituciones externas participantes:</strong><br>"
+                    for inst, count in unicas.items():
+                        html += f"{inst}: {count}<br>"
+                    html += "</div>"
 
                 html += "</div></div>"
 
@@ -188,7 +205,7 @@ def index():
         // Calcular totales iniciales al cargar la página
         window.onload = () => {
             document.querySelectorAll("table").forEach(tabla => {
-                if (tabla.id.startsWith("table-")) {
+                if (tabla.id.startswith("table-")) {
                     actualizarTotales(tabla.id);
                 }
             });
