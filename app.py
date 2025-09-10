@@ -141,4 +141,69 @@ def index():
         html += "</div>"
 
     html += """
-        </di
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filtrar(input, tableId) {
+            var filtro = input.value.toLowerCase();
+            var filas = document.querySelectorAll(`#${tableId} tbody tr:not(.totales-row)`);
+            filas.forEach(fila => {
+                var texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(filtro) ? '' : 'none';
+            });
+            actualizarTotales(tableId);  // recalcular después del filtro
+        }
+
+        function actualizarTotales(tableId) {
+            let tabla = document.getElementById(tableId);
+            let filas = tabla.querySelectorAll("tbody tr:not(.totales-row)");
+            let columnas = tabla.querySelectorAll("thead th").length;
+            let totales = new Array(columnas).fill(0);
+
+            filas.forEach(fila => {
+                if (fila.style.display !== "none") {  // solo filas visibles
+                    fila.querySelectorAll("td").forEach((celda, idx) => {
+                        let valor = parseFloat(celda.innerText.replace(",", ""));
+                        if (!isNaN(valor)) {
+                            totales[idx] += valor;
+                        }
+                    });
+                }
+            });
+
+            // Escribir resultados en la fila de totales
+            let filaTotales = tabla.querySelector(".totales-row");
+            if (filaTotales) {
+                filaTotales.querySelectorAll("td").forEach((celda, idx) => {
+                    if (totales[idx] !== 0) {
+                        celda.innerText = totales[idx];
+                    } else {
+                        celda.innerText = "";
+                    }
+                });
+            }
+        }
+
+        // Calcular totales iniciales al cargar la página
+        window.onload = () => {
+            document.querySelectorAll("table").forEach(tabla => {
+                if (tabla.id.startsWith("table-")) {
+                    actualizarTotales(tabla.id);
+                }
+            });
+        };
+    </script>
+    </body>
+    </html>
+    """
+    return render_template_string(html, errores=errores)
+
+@app.route('/reload')
+def reload_data():
+    global sheets, errores
+    sheets, errores = cargar_sheets()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
