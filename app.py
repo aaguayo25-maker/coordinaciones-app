@@ -106,14 +106,10 @@ def index():
             for _, fila in df.head(max_rows).iterrows():
                 html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
 
-            # === FILA DE TOTALES ===
-            totales = df.sum(numeric_only=True)
-            html += "<tr style='font-weight:bold; background:#f2f2f2'>"
-            for col in df.columns:
-                if col in totales:  # si la columna es numérica
-                    html += f"<td>{totales[col]}</td>"
-                else:
-                    html += "<td></td>"
+            # === FILA DE TOTALES VACÍA ===
+            html += "<tr class='totales-row' style='font-weight:bold; background:#f2f2f2'>"
+            for _ in df.columns:
+                html += "<td></td>"
             html += "</tr>"
 
             html += "</tbody></table></div>"
@@ -127,12 +123,52 @@ def index():
     <script>
         function filtrar(input, tableId) {
             var filtro = input.value.toLowerCase();
-            var filas = document.querySelectorAll(`#${tableId} tbody tr`);
+            var filas = document.querySelectorAll(`#${tableId} tbody tr:not(.totales-row)`);
             filas.forEach(fila => {
                 var texto = fila.innerText.toLowerCase();
                 fila.style.display = texto.includes(filtro) ? '' : 'none';
             });
+            actualizarTotales(tableId);  // recalcular después del filtro
         }
+
+        function actualizarTotales(tableId) {
+            let tabla = document.getElementById(tableId);
+            let filas = tabla.querySelectorAll("tbody tr:not(.totales-row)");
+            let columnas = tabla.querySelectorAll("thead th").length;
+            let totales = new Array(columnas).fill(0);
+
+            filas.forEach(fila => {
+                if (fila.style.display !== "none") {  // solo filas visibles
+                    fila.querySelectorAll("td").forEach((celda, idx) => {
+                        let valor = parseFloat(celda.innerText.replace(",", ""));
+                        if (!isNaN(valor)) {
+                            totales[idx] += valor;
+                        }
+                    });
+                }
+            });
+
+            // Escribir resultados en la fila de totales
+            let filaTotales = tabla.querySelector(".totales-row");
+            if (filaTotales) {
+                filaTotales.querySelectorAll("td").forEach((celda, idx) => {
+                    if (totales[idx] !== 0) {
+                        celda.innerText = totales[idx];
+                    } else {
+                        celda.innerText = "";
+                    }
+                });
+            }
+        }
+
+        // Calcular totales iniciales al cargar la página
+        window.onload = () => {
+            document.querySelectorAll("table").forEach(tabla => {
+                if (tabla.id.startsWith("table-")) {
+                    actualizarTotales(tabla.id);
+                }
+            });
+        };
     </script>
     </body>
     </html>
