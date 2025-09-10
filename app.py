@@ -105,7 +105,7 @@ def index():
             for _, fila in df.head(max_rows).iterrows():
                 html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
 
-            # === FILA DE TOTALES VACÍA (para JavaScript) ===
+            # === FILA DE TOTALES VACÍA (rellenada por JS) ===
             html += "<tr class='totales-row' style='font-weight:bold; background:#f2f2f2'>"
             for _ in df.columns:
                 html += "<td></td>"
@@ -202,10 +202,10 @@ def index():
             }
         }
 
-        // Calcular totales iniciales al cargar la página
+        // ✅ Corrección aquí
         window.onload = () => {
             document.querySelectorAll("table").forEach(tabla => {
-                if (tabla.id.startswith("table-")) {
+                if (tabla.id.startsWith("table-")) {  // ahora sí en JS
                     actualizarTotales(tabla.id);
                 }
             });
