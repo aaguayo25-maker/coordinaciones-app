@@ -55,6 +55,7 @@ def index():
             .topbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
             .errors { margin-top: 10px; }
             .resumen { margin-top: 20px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; }
+            .card { margin-bottom: 15px; }
         </style>
     </head>
     <body>
@@ -118,42 +119,69 @@ def index():
                 def conteo(col):
                     if col in df.columns:
                         counts = df[col].value_counts().to_dict()
-                        return "<br>".join([f"{k}: {v}" for k, v in counts.items()])
-                    return "Columna no encontrada"
+                        return counts
+                    return {}
 
-                html += "<div class='resumen'><h5>Resumen de variables cualitativas y externas</h5><div class='row'>"
-                html += f"<div class='col'><strong>Categoría:</strong><br>{conteo('CATEGORIA')}</div>"
-                html += f"<div class='col'><strong>SNI:</strong><br>{conteo('SNI')}</div>"
-                html += f"<div class='col'><strong>PRODEP:</strong><br>{conteo('PRODEP')}</div>"
-                html += f"<div class='col'><strong>PROESDE:</strong><br>{conteo('PROESDE')}</div>"
-                html += f"<div class='col'><strong>Nivel:</strong><br>{conteo('NIVEL')}</div>"
-                html += f"<div class='col'><strong>Definitividad:</strong><br>{conteo('DEFINITIVIDAD')}</div>"
-
-                # Total de profesores
                 total_profesores = len(df)
-                html += f"<div class='col'><strong>Total de profesores:</strong><br>{total_profesores}</div>"
+                total_externos = df["NUMERO EXTERNOS"].sum() if "NUMERO EXTERNOS" in df.columns else 0
+                definitividad = conteo("DEFINITIVIDAD")
 
-                # Total de externos
-                if "NUMERO EXTERNOS" in df.columns:
-                    total_externos = df["NUMERO EXTERNOS"].sum()
-                    html += f"<div class='col'><strong>Total de externos:</strong><br>{total_externos}</div>"
-
-                # Instituciones externas
-                instit_cols = [col for col in df.columns if col.startswith("EXTERNO")]
-                instituciones = []
-                for col in instit_cols:
-                    if col in df.columns:
-                        instituciones.extend(df[col].dropna().astype(str).tolist())
-
-                instituciones = [i for i in instituciones if i.strip() not in ["", "NO APLICA"]]
-                if instituciones:
-                    unicas = pd.Series(instituciones).value_counts().to_dict()
-                    html += "<div class='col-12 mt-3'><strong>Instituciones externas participantes:</strong><br>"
-                    for inst, count in unicas.items():
-                        html += f"{inst}: {count}<br>"
-                    html += "</div>"
-
-                html += "</div></div>"
+                html += """
+                <div class='resumen'>
+                  <h4 class="mb-3">Resumen PTC</h4>
+                  <div class="row">
+                    <div class="col-md-3">
+                      <div class="card text-center">
+                        <div class="card-body">
+                          <h6 class="card-title">Profesores</h6>
+                          <p class="card-text fs-3">""" + str(total_profesores) + """</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="card text-center">
+                        <div class="card-body">
+                          <h6 class="card-title">Externos</h6>
+                          <p class="card-text fs-3">""" + str(total_externos) + """</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <canvas id="definitividadChart"></canvas>
+                    </div>
+                  </div>
+                  <hr>
+                  <div class="row mt-3">
+                    <div class="col">
+                      <strong>Categoría:</strong><br>""" + "<br>".join([f"{k}: {v}" for k,v in conteo("CATEGORIA").items()]) + """
+                    </div>
+                    <div class="col">
+                      <strong>SNI:</strong><br>""" + "<br>".join([f"{k}: {v}" for k,v in conteo("SNI").items()]) + """
+                    </div>
+                    <div class="col">
+                      <strong>PRODEP:</strong><br>""" + "<br>".join([f"{k}: {v}" for k,v in conteo("PRODEP").items()]) + """
+                    </div>
+                    <div class="col">
+                      <strong>PROESDE:</strong><br>""" + "<br>".join([f"{k}: {v}" for k,v in conteo("PROESDE").items()]) + """
+                    </div>
+                  </div>
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                  const ctx = document.getElementById('definitividadChart');
+                  new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                      labels: ['SI', 'NO'],
+                      datasets: [{
+                        label: 'Definitividad',
+                        data: [""" + str(definitividad.get("SI",0)) + """, """ + str(definitividad.get("NO",0)) + """],
+                        backgroundColor: ['#4CAF50','#F44336']
+                      }]
+                    }
+                  });
+                </script>
+                """
 
         html += "</div>"
 
@@ -169,7 +197,7 @@ def index():
                 var texto = fila.innerText.toLowerCase();
                 fila.style.display = texto.includes(filtro) ? '' : 'none';
             });
-            actualizarTotales(tableId);  // recalcular después del filtro
+            actualizarTotales(tableId);
         }
 
         function actualizarTotales(tableId) {
@@ -179,7 +207,7 @@ def index():
             let totales = new Array(columnas).fill(0);
 
             filas.forEach(fila => {
-                if (fila.style.display !== "none") {  // solo filas visibles
+                if (fila.style.display !== "none") {
                     fila.querySelectorAll("td").forEach((celda, idx) => {
                         let valor = parseFloat(celda.innerText.replace(",", ""));
                         if (!isNaN(valor)) {
@@ -189,7 +217,6 @@ def index():
                 }
             });
 
-            // Escribir resultados en la fila de totales
             let filaTotales = tabla.querySelector(".totales-row");
             if (filaTotales) {
                 filaTotales.querySelectorAll("td").forEach((celda, idx) => {
@@ -202,10 +229,9 @@ def index():
             }
         }
 
-        // ✅ Corrección aquí
         window.onload = () => {
             document.querySelectorAll("table").forEach(tabla => {
-                if (tabla.id.startsWith("table-")) {  // ahora sí en JS
+                if (tabla.id.startsWith("table-")) {
                     actualizarTotales(tabla.id);
                 }
             });
@@ -224,3 +250,4 @@ def reload_data():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
