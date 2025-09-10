@@ -1,4 +1,3 @@
-
 import io
 import ssl
 import requests
@@ -38,7 +37,6 @@ def cargar_sheets():
             tmp_sheets[hoja] = df
         except Exception as e:
             tmp_errores.append(f"Error leyendo '{hoja}': {e}")
-            # Si quieres que la hoja aparezca vacía pero visible:
             tmp_sheets[hoja] = pd.DataFrame()
     return tmp_sheets, tmp_errores
 
@@ -102,24 +100,25 @@ def index():
         else:
             html += f'<div class="table-responsive"><table class="table table-bordered table-sm" id="table-{i}">'
             html += "<thead><tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr></thead><tbody>"
-            # limitar filas para no colapsar el navegador si hay MUCHAS (opcional)
+
+            # === FILAS DE DATOS ===
             max_rows = 500
             for _, fila in df.head(max_rows).iterrows():
-    html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
+                html += "<tr>" + "".join([f"<td>{fila[col]}</td>" for col in df.columns]) + "</tr>"
 
-# Si es la hoja DOCENCIA (o quita el if para aplicarlo a todas)
-if nombre.upper() == "DOCENCIA":
-    totales = df.sum(numeric_only=True)
-    html += "<tr style='font-weight:bold; background:#f2f2f2'>"
-    for col in df.columns:
-        if col in totales:
-            html += f"<td>{totales[col]}</td>"
-        else:
-            html += "<td></td>"
-    html += "</tr>"
+            # === FILA DE TOTALES ===
+            totales = df.sum(numeric_only=True)
+            html += "<tr style='font-weight:bold; background:#f2f2f2'>"
+            for col in df.columns:
+                if col in totales:  # si la columna es numérica
+                    html += f"<td>{totales[col]}</td>"
+                else:
+                    html += "<td></td>"
+            html += "</tr>"
 
-html += "</tbody></table></div>"
+            html += "</tbody></table></div>"
 
+        html += "</div>"
 
     html += """
         </div>
